@@ -25,8 +25,14 @@ RUN grep version /build/target/maven-archiver/pom.properties | cut -d '=' -f2 >.
 RUN grep artifactId /build/target/maven-archiver/pom.properties | cut -d '=' -f2 >.env-id
 RUN mv /build/target/$(cat .env-id)-$(cat .env-version).jar /build/target/export-run-artifact.jar
 
+FROM appdynamics/java-agent:23.1.0
+RUN env && ls -lh /opt
+
 FROM openjdk:11-jdk
 COPY --from=0 /build/target/export-run-artifact.jar  /app/target/export-run-artifact.jar
+COPY --from=1 /opt/appdynamics/ /opt/appdynamics/
+
+ENV JAVA_OPTS -javaagent:/opt/appdynamics/javaagent.jar
 
 EXPOSE 8081
-ENTRYPOINT [ "java", "-jar", "/app/target/export-run-artifact.jar", "--server.port=8081" ]
+ENTRYPOINT [ "java", "-javaagent:/opt/appdynamics/javaagent.jar", "-jar", "/app/target/export-run-artifact.jar", "--server.port=8081" ]
